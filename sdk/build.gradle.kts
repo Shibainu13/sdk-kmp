@@ -17,15 +17,15 @@ plugins {
     id("org.gradle.signing")
 }
 
-if (System.getenv().containsKey("OSSRH_GPG_SECRET_KEY")) {
-    signing {
-        useInMemoryPgpKeys(
-            System.getenv("OSSRH_GPG_SECRET_KEY"),
-            System.getenv("OSSRH_GPG_SECRET_KEY_PASSWORD")
-        )
-        sign(publishing.publications)
-    }
-}
+//if (System.getenv().containsKey("OSSRH_GPG_SECRET_KEY")) {
+//    signing {
+//        useInMemoryPgpKeys(
+//            System.getenv("OSSRH_GPG_SECRET_KEY"),
+//            System.getenv("OSSRH_GPG_SECRET_KEY_PASSWORD")
+//        )
+//        sign(publishing.publications)
+//    }
+//}
 
 kover {
     useJacoco("0.8.11")
@@ -68,10 +68,28 @@ koverReport {
 }
 
 /**
- * The `javadocJar` variable is used to register a `Jar` task to generate a Javadoc JAR file.
+ * The javadocJar variable is used to register a Jar task to generate a Javadoc JAR file.
  * The Javadoc JAR file is created with the classifier "javadoc" and it includes the HTML documentation generated
- * by the `dokkaHtml` task.
+ * by the dokkaHtml task.
  */
+publishing {
+    repositories {
+        maven {
+            name = "GithubPackages"
+            url = uri("https://maven.pkg.github.com/Shibainu13/sdk-kmp")
+            credentials {
+                username = providers.gradleProperty("gpr.user").getOrElse("")
+                password = providers.gradleProperty("gpr.key").getOrElse("")
+            }
+        }
+    }
+    publications {
+        withType<MavenPublication> {
+            // artifact(javadocJar)
+        }
+    }
+}
+
 val javadocJar by tasks.registering(Jar::class) {
     archiveClassifier.set("javadoc")
     from(tasks.dokkaHtml)
@@ -99,13 +117,6 @@ kotlin {
                 )
             }
         }
-        publishing {
-            publications {
-                withType<MavenPublication> {
-                    artifact(javadocJar)
-                }
-            }
-        }
     }
     applyDefaultHierarchyTemplate()
 
@@ -122,7 +133,7 @@ kotlin {
                 implementation(libs.ktor.client.content.negotiation)
                 implementation(libs.ktor.client.logging)
                 implementation(libs.ktor.serialization.kotlinx.json)
-                implementation(libs.ktor.websockets)
+                implementation(libs.ktor.client.websockets)
 
                 implementation(libs.dependencies.didpeer)
                 implementation(libs.dependencies.apollo)
@@ -222,7 +233,7 @@ android {
     /**
      * Because Software Components will not be created automatically for Maven publishing from
      * Android Gradle Plugin 8.0. To opt-in to the future behavior, set the Gradle property android.
-     * disableAutomaticComponentCreation=true in the `gradle.properties` file or use the new
+     * disableAutomaticComponentCreation=true in the gradle.properties file or use the new
      * publishing DSL.
      */
     publishing {
@@ -235,7 +246,7 @@ android {
 
     packaging {
         resources {
-            merges += "**/**.proto"
+            merges += "*/*.proto"
         }
     }
 }
@@ -352,7 +363,7 @@ mavenPublishing {
     val artifactId = project.name
     val version = project.version.toString()
     publishToMavenCentral(automaticRelease = shouldAutoRelease)
-    signAllPublications()
+//    signAllPublications()
     coordinates(group.toString(), artifactId, version.toString())
     pom {
         name.set("SDK")
